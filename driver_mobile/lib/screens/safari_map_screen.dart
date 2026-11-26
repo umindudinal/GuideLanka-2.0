@@ -22,7 +22,9 @@ class SafariMapScreenState extends State<SafariMapScreen> with SingleTickerProvi
 
   static const LatLng _defaultLocation = LatLng(6.540324565195912, 81.30531824100515);
 
-  LatLng? _currentLocation = _defaultLocation;
+  LatLng? _currentLocation;
+  bool _hasRealGpsFix = false;
+  StreamSubscription<Position>? _positionStreamSub;
 
   final MapController _mapController = MapController();
 
@@ -140,6 +142,7 @@ class SafariMapScreenState extends State<SafariMapScreen> with SingleTickerProvi
   @override
   void dispose() {
     NotificationService.sightingRefreshTick.removeListener(_onForegroundSightingRefresh);
+    _positionStreamSub?.cancel();
     _sightingsTimer?.cancel();
     _pulseController?.dispose();
     _mapController.dispose();
@@ -377,18 +380,50 @@ class SafariMapScreenState extends State<SafariMapScreen> with SingleTickerProvi
         }
       }
 
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted && _currentLocation == null) {
+          setState(() {
+            _currentLocation = _defaultLocation;
+          });
+        }
+        return;
+      }
+
+      // Show last known GPS immediately while waiting for high-accuracy fix
+      try {
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null && mounted && !_hasRealGpsFix) {
+          final lastPos = LatLng(lastKnown.latitude, lastKnown.longitude);
+          setState(() {
+            _currentLocation = lastPos;
+            _hasRealGpsFix = true;
+          });
+          if (_isMapReady && _pendingFocusTarget == null && !_shouldSkipAutoRecenter()) {
+            _mapController.move(lastPos, 16.0);
+          }
+        }
+      } catch (_) {
+        // getLastKnownPosition is unsupported on web; continue to getCurrentPosition
+      }
+
       Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (mounted) {
+        final realPos = LatLng(position.latitude, position.longitude);
         setState(() {
-          _currentLocation = LatLng(position.latitude, position.longitude);
+          _currentLocation = realPos;
+          _hasRealGpsFix = true;
         });
+        if (_isMapReady && _pendingFocusTarget == null && !_shouldSkipAutoRecenter()) {
+          _mapController.move(realPos, 16.0);
+        }
       }
 
       ApiService.updateLiveLocation(position.latitude, position.longitude);
 
-      Geolocator.getPositionStream(
+      await _positionStreamSub?.cancel();
+      _positionStreamSub = Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 10,
@@ -397,6 +432,7 @@ class SafariMapScreenState extends State<SafariMapScreen> with SingleTickerProvi
         if (mounted) {
           setState(() {
             _currentLocation = LatLng(position.latitude, position.longitude);
+            _hasRealGpsFix = true;
           });
 
           if (_isMapReady && !_shouldSkipAutoRecenter()) {
@@ -1241,11 +1277,28 @@ class SafariMapScreenState extends State<SafariMapScreen> with SingleTickerProvi
                         isActive: true,
                         activeColor: Colors.blue.shade700,
                         onPressed: () {
+                          _skipAutoRecenterUntil = null;
                           if (_isMapReady && _currentLocation != null) {
                             final targetZoom = _mapController.camera.zoom >= 17.0
                                 ? _mapController.camera.zoom
                                 : 17.5;
                             _mapController.move(_currentLocation!, targetZoom);
+                          }
+                          if (!_hasRealGpsFix) {
+                            _startLiveTracking();
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
+
+                      _buildMapControlButton(
+                        icon: Icons.forest_rounded,
+                        tooltip: 'Yala Park View',
+                        isActive: false,
+                        onPressed: () {
+                          if (_isMapReady) {
+                            _skipAutoRecenterUntil = DateTime.now().add(const Duration(seconds: 25));
+                            _mapController.move(_defaultLocation, 14.5);
                           }
                         },
                       ),

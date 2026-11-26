@@ -23,6 +23,31 @@ import {
   Edit3
 } from 'lucide-react';
 
+const normalizeSriLankaPhone = (rawInput) => {
+  if (!rawInput || rawInput === '+' || rawInput === '+9') {
+    return '+94';
+  }
+
+  let localDigits = '';
+  if (rawInput.startsWith('+94')) {
+    localDigits = rawInput.slice(3).replace(/\D/g, '');
+  } else {
+    localDigits = rawInput.replace(/\D/g, '');
+    if (localDigits.startsWith('94')) {
+      localDigits = localDigits.slice(2);
+    }
+  }
+
+  // Convert 10-digit local format (0771234567) to 9 digits after +94
+  if (localDigits.startsWith('0')) {
+    localDigits = localDigits.slice(1);
+  }
+
+  return '+94' + localDigits.slice(0, 9);
+};
+
+const isValidSriLankaPhone = (phoneValue) => /^\+94\d{9}$/.test(phoneValue || '');
+
 function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
   const [avatarError, setAvatarError] = useState(false);
 
@@ -41,7 +66,9 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
   // Edit Driver States
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState(driver.full_name || '');
-  const [editPhone, setEditPhone] = useState(driver.phone_number || '');
+  const [editPhone, setEditPhone] = useState(
+    driver.phone_number ? normalizeSriLankaPhone(driver.phone_number) : '+94'
+  );
   const [editModel, setEditModel] = useState(
     profile?.vehicle_model ||
     (profile?.vehicle_id?.includes('•') ? profile.vehicle_id.split('•')[1].trim() : 'Toyota Hilux 4x4 (6 Seats)')
@@ -64,7 +91,7 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
 
   const handleOpenEdit = () => {
     setEditName(driver.full_name || '');
-    setEditPhone(driver.phone_number || '');
+    setEditPhone(driver.phone_number ? normalizeSriLankaPhone(driver.phone_number) : '+94');
     setEditModel(
       profile?.vehicle_model ||
       (profile?.vehicle_id?.includes('•') ? profile.vehicle_id.split('•')[1].trim() : 'Toyota Hilux 4x4 (6 Seats)')
@@ -126,12 +153,14 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
     setEditSuccess('');
 
     try {
-      let formattedPhone = editPhone.trim();
-      if (formattedPhone) {
-        let cleaned = formattedPhone.replace(/\D/g, '');
-        if (cleaned.startsWith('0')) cleaned = '94' + cleaned.substring(1);
-        else if (!cleaned.startsWith('94')) cleaned = '94' + cleaned;
-        formattedPhone = '+' + cleaned;
+      let formattedPhone = '';
+      if (editPhone.trim() && editPhone.trim() !== '+94') {
+        formattedPhone = normalizeSriLankaPhone(editPhone.trim());
+        if (!isValidSriLankaPhone(formattedPhone)) {
+          setEditError('Please enter a valid 10-digit phone number (+94 followed by 9 digits, e.g. +94771234567).');
+          setSavingEdit(false);
+          return;
+        }
       }
 
       const combinedVehicleId = `${editPlate.trim()} • ${editModel.trim()}`;
@@ -488,9 +517,11 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
                 <div className="relative">
                   <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={12}
                     value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
+                    onChange={(e) => setEditPhone(normalizeSriLankaPhone(e.target.value))}
                     placeholder="+94771234567"
                     className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-200 focus:border-emerald-500 focus:outline-none transition"
                   />
@@ -673,33 +704,12 @@ export default function DriverReviewList({ drivers, onDriverAdded, onDriverUpdat
   const [imagePreview, setImagePreview] = useState('');
 
   const formatPhoneWithPlus94 = (rawPhone) => {
-    if (!rawPhone) return '';
-    let digits = rawPhone.replace(/\D/g, '');
-    if (digits.startsWith('0')) {
-      digits = '94' + digits.substring(1);
-    } else if (!digits.startsWith('94')) {
-      digits = '94' + digits;
-    }
-    return '+' + digits;
+    const normalized = normalizeSriLankaPhone(rawPhone);
+    return normalized === '+94' ? '' : normalized;
   };
 
   const handlePhoneChange = (e) => {
-    let input = e.target.value;
-    if (!input || input === '+' || input === '+9') {
-      setPhone('+94');
-      return;
-    }
-    if (!input.startsWith('+94')) {
-      const digits = input.replace(/\D/g, '');
-      if (digits.startsWith('0')) {
-        input = '+94' + digits.substring(1);
-      } else if (digits.startsWith('94')) {
-        input = '+' + digits;
-      } else {
-        input = '+94' + digits;
-      }
-    }
-    setPhone(input);
+    setPhone(normalizeSriLankaPhone(e.target.value));
   };
 
   const handleImageChange = (e) => {
@@ -725,8 +735,14 @@ export default function DriverReviewList({ drivers, onDriverAdded, onDriverUpdat
 
   const handleRegisterDriver = async (e) => {
     e.preventDefault();
-    if (!fullName || !email || !password || !vehicleId || !phone) {
+    if (!fullName || !email || !password || !vehicleId || !phone || phone === '+94') {
       setError('Please fill in all required fields.');
+      return;
+    }
+
+    const normalizedPhone = normalizeSriLankaPhone(phone);
+    if (!isValidSriLankaPhone(normalizedPhone)) {
+      setError('Please enter a valid 10-digit Sri Lankan phone number (+94 followed by 9 digits, e.g. +94771234567).');
       return;
     }
 
@@ -1062,13 +1078,20 @@ export default function DriverReviewList({ drivers, onDriverAdded, onDriverUpdat
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number *</label>
+                      <span className={`text-[10px] font-semibold ${isValidSriLankaPhone(phone) ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {Math.max(0, phone.replace('+94', '').length)}/9 digits
+                      </span>
+                    </div>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
                         <Phone size={14} />
                       </span>
                       <input
-                        type="text"
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={12}
                         required
                         placeholder="e.g. +94771234567"
                         value={phone}

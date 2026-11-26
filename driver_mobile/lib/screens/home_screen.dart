@@ -809,26 +809,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                             ),
                                           ),
-
-                                          Expanded(
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                gradient: AppGradients.primaryGradient,
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: ElevatedButton(
-                                                onPressed: () => _changeStatus(booking['id'].toString(), 'CONFIRMED'),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.transparent,
-                                                  shadowColor: Colors.transparent,
-                                                  foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                ),
-                                                child: const Text('Accept', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                              ),
-                                            ),
-                                          ),
                                         ],
                                       )
 

@@ -67,12 +67,14 @@ const registerUser = async (req, res) => {
         function formatPhoneWithPlus(phone) {
             if (!phone) return '';
             let cleaned = phone.replace(/\D/g, '');
-            if (cleaned.startsWith('0')) {
+            if (cleaned.startsWith('940')) {
+                cleaned = '94' + cleaned.substring(3);
+            } else if (cleaned.startsWith('0')) {
                 cleaned = '94' + cleaned.substring(1);
             } else if (!cleaned.startsWith('94')) {
                 cleaned = '94' + cleaned;
             }
-            return '+' + cleaned;
+            return '+' + cleaned.slice(0, 11);
         }
 
         const formattedPhone = phone_number ? formatPhoneWithPlus(phone_number) : '';
