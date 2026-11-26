@@ -19,6 +19,10 @@ const isStrongPassword = (pwd) => {
 const registerUser = async (req, res) => {
     const { full_name, email, password, role, phone_number, vehicle_id, verification_code, profile_image } = req.body;
 
+    if (!full_name || !email || !password) {
+        return res.status(400).json({ error: "Full name, email, and password are required." });
+    }
+
     try {
 
         const { data: existingUser, error: checkError } = await supabase
@@ -140,6 +144,10 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required." });
+    }
+
     try {
 
         const { data: users, error } = await supabase
@@ -178,8 +186,13 @@ const loginUser = async (req, res) => {
 const changePassword = async (req, res) => {
     try {
         const { user_id, old_password, new_password } = req.body;
+        const targetUserId = req.user?.id || user_id;
 
-        if (!user_id || !old_password || !new_password) {
+        if (req.user?.id && user_id && req.user.id !== user_id) {
+            return res.status(403).json({ success: false, message: 'Forbidden: cannot change another user password' });
+        }
+
+        if (!targetUserId || !old_password || !new_password) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
@@ -193,7 +206,7 @@ const changePassword = async (req, res) => {
         const { data: users, error: fetchError } = await supabase
             .from('users')
             .select('*')
-            .eq('id', user_id);
+            .eq('id', targetUserId);
 
         if (fetchError || !users || users.length === 0) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -212,7 +225,7 @@ const changePassword = async (req, res) => {
         const { error: updateError } = await supabase
             .from('users')
             .update({ password: hashedNewPassword })
-            .eq('id', user_id);
+            .eq('id', targetUserId);
 
         if (updateError) {
             console.error("❌ Password Update Error:", updateError.message);
@@ -232,7 +245,9 @@ const otpStore = {};
 function normalizePhone(phone) {
     if (!phone) return '';
     let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('0')) {
+    if (cleaned.startsWith('940')) {
+        cleaned = '94' + cleaned.substring(3);
+    } else if (cleaned.startsWith('0')) {
         cleaned = '94' + cleaned.substring(1);
     } else if (cleaned.length === 9) {
         cleaned = '94' + cleaned;

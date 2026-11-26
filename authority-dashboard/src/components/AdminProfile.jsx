@@ -4,7 +4,6 @@ import { supabase } from '../services/supabase';
 
 import {
   User,
-  Mail,
   Shield,
   Calendar,
   Lock,
@@ -20,16 +19,18 @@ import {
 } from 'lucide-react';
 
 export default function AdminProfile({ user, onUserUpdate }) {
-  if (!user) return null;
-
   const [isEditing, setIsEditing] = useState(false);
-  const [fullName, setFullName] = useState(user.full_name || '');
-  const [phoneNumber, setPhoneNumber] = useState(user.phone_number || '');
-  const [avatarUrl, setAvatarUrl] = useState(user.profile_image || localStorage.getItem('admin_avatar_' + user.id) || '');
+  const [fullName, setFullName] = useState(user?.full_name || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
+  const [avatarUrl, setAvatarUrl] = useState(
+    user ? (user.profile_image || localStorage.getItem('admin_avatar_' + user.id) || '') : ''
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
   const fileInputRef = useRef(null);
+
+  if (!user) return null;
 
   const joinedDate = user.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', { dateStyle: 'long' })
@@ -57,6 +58,16 @@ export default function AdminProfile({ user, onUserUpdate }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      setMessage({ text: 'Full name is required.', type: 'error' });
+      return;
+    }
+    const trimmedPhone = phoneNumber.trim();
+    if (trimmedPhone && (trimmedPhone.replace(/\D/g, '').length < 9 || /[a-zA-Z]/.test(trimmedPhone))) {
+      setMessage({ text: 'Please enter a valid phone number (at least 9 digits, no letters).', type: 'error' });
+      return;
+    }
+
     setSaving(true);
     setMessage({ text: '', type: '' });
 

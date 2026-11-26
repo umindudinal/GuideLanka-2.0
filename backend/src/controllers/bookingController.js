@@ -21,10 +21,18 @@ const createBooking = async (req, res) => {
     const tourist_id = req.user.id;
 
     try {
-        if (!booking_date) {
+        if (!booking_date || !/^\d{4}-\d{2}-\d{2}$/.test(booking_date)) {
             return res.status(400).json({
                 success: false,
-                error: "Booking date is required."
+                error: "A valid booking date (YYYY-MM-DD) is required."
+            });
+        }
+
+        const parsedTouristCount = tourist_count !== undefined ? Number(tourist_count) : 1;
+        if (!Number.isInteger(parsedTouristCount) || parsedTouristCount < 1 || parsedTouristCount > 12) {
+            return res.status(400).json({
+                success: false,
+                error: "Tourist count must be an integer between 1 and 12."
             });
         }
 
@@ -89,7 +97,7 @@ const createBooking = async (req, res) => {
                     driver_id, 
                     booking_date, 
                     time_slot: slotToBook,
-                    tourist_count: Number(tourist_count) || 1, 
+                    tourist_count: parsedTouristCount, 
                     status: 'PENDING' 
                 }
             ])
@@ -113,7 +121,7 @@ const updateBookingStatus = async (req, res) => {
     const { status } = req.body;
     const driver_id = req.user.id;
 
-    if (!['CONFIRMED', 'REJECTED', 'COMPLETED'].includes(status.toUpperCase())) {
+    if (!status || typeof status !== 'string' || !['CONFIRMED', 'REJECTED', 'COMPLETED'].includes(status.toUpperCase())) {
         return res.status(400).json({ error: "Invalid status. Please use 'CONFIRMED', 'REJECTED', or 'COMPLETED'." });
     }
 

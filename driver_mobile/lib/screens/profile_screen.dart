@@ -458,9 +458,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: const Icon(Icons.check_circle_rounded),
                     label: const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     onPressed: () async {
-                      if (nameController.text.trim().isEmpty) {
+                      final trimmedName = nameController.text.trim();
+                      final trimmedMobile = mobileController.text.trim();
+                      final priceVal = int.tryParse(priceController.text.trim());
+                      final expYearsVal = int.tryParse(experienceYearsController.text.trim());
+
+                      if (trimmedName.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Name cannot be empty')),
+                        );
+                        return;
+                      }
+
+                      if (trimmedMobile.isNotEmpty) {
+                        var digits = trimmedMobile.replaceAll(RegExp(r'\D'), '');
+                        if (digits.startsWith('94')) digits = digits.substring(2);
+                        if (digits.startsWith('0')) digits = digits.substring(1);
+                        if (RegExp(r'[a-zA-Z]').hasMatch(trimmedMobile) || digits.length != 9) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Enter a valid 10-digit Sri Lankan phone number (+94 followed by 9 digits).'),
+                              backgroundColor: AppColors.offline,
+                            ),
+                          );
+                          return;
+                        }
+                      }
+
+                      if (priceVal == null || priceVal <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Safari price must be a positive number.'),
+                            backgroundColor: AppColors.offline,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (expYearsVal == null || expYearsVal < 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Experience years cannot be negative.'),
+                            backgroundColor: AppColors.offline,
+                          ),
                         );
                         return;
                       }
@@ -474,12 +514,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
                       );
 
-                      final priceVal = int.tryParse(priceController.text.trim()) ?? 9500;
-                      final expYearsVal = int.tryParse(experienceYearsController.text.trim()) ?? 5;
-
                       final result = await ApiService.updateDriverProfile(
-                        nameController.text.trim(),
-                        mobileController.text.trim(),
+                        trimmedName,
+                        trimmedMobile,
                         licenseController.text.trim(),
                         vehicleController.text.trim(),
                         priceVal,

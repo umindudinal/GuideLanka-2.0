@@ -114,19 +114,29 @@ exports.updateDriverProfile = async (req, res) => {
         const driverId = req.user.id;
         const { name, mobile, licenseNo, vehicleNo, pricePerSafari, experienceYears, experience } = req.body;
 
-        if (!name) {
+        if (!name || !name.toString().trim()) {
             return res.status(400).json({ success: false, error: "Name is required" });
+        }
+
+        if (pricePerSafari !== undefined && (!Number.isFinite(Number(pricePerSafari)) || Number(pricePerSafari) <= 0)) {
+            return res.status(400).json({ success: false, error: "Safari price must be a positive number" });
+        }
+
+        if (experienceYears !== undefined && (!Number.isFinite(Number(experienceYears)) || Number(experienceYears) < 0)) {
+            return res.status(400).json({ success: false, error: "Experience years cannot be negative" });
         }
 
         function formatPhoneWithPlus(phone) {
             if (!phone) return '';
             let cleaned = phone.replace(/\D/g, '');
-            if (cleaned.startsWith('0')) {
+            if (cleaned.startsWith('940')) {
+                cleaned = '94' + cleaned.substring(3);
+            } else if (cleaned.startsWith('0')) {
                 cleaned = '94' + cleaned.substring(1);
             } else if (!cleaned.startsWith('94')) {
                 cleaned = '94' + cleaned;
             }
-            return '+' + cleaned;
+            return '+' + cleaned.slice(0, 11);
         }
 
         const formattedMobile = mobile ? formatPhoneWithPlus(mobile) : mobile;
@@ -298,16 +308,21 @@ exports.addDriverReview = async (req, res) => {
         const { driverId } = req.params;
         const { rating, comment, tourist_name, tourist_email } = req.body;
 
-        if (!rating || !comment) {
+        const numRating = Number(rating);
+        if (!rating || !comment || !comment.toString().trim()) {
             return res.status(400).json({ success: false, error: "Rating and comment are required." });
+        }
+
+        if (!Number.isFinite(numRating) || numRating < 1 || numRating > 5) {
+            return res.status(400).json({ success: false, error: "Rating must be between 1 and 5." });
         }
 
         const { data: newReview, error } = await supabase
             .from('driver_reviews')
             .insert([{
                 driver_id: driverId,
-                rating: Number(rating),
-                comment: comment,
+                rating: numRating,
+                comment: comment.toString().trim(),
                 tourist_name: tourist_name || 'Anonymous Explorer',
                 tourist_email: tourist_email || 'anonymous@guidelanka.com'
             }])

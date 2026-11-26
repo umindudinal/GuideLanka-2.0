@@ -109,6 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  String? _formatSriLankaPhone(String rawInput) {
+    var digits = rawInput.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('94')) {
+      digits = digits.substring(2);
+    }
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+    if (!RegExp(r'^\d{9}$').hasMatch(digits)) {
+      return null;
+    }
+    return '+94$digits';
+  }
+
   Future<void> _handleSendOtp({bool isResend = false}) async {
     final phone = _phoneController.text.trim();
 
@@ -119,11 +133,20 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    final fullPhone = _formatSriLankaPhone(phone);
+    if (fullPhone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 9-digit mobile number (e.g. 771234567 or 0771234567)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSendingOtp = true;
     });
-
-    final fullPhone = '+94$phone';
 
     final result = await ApiService.sendOtp(fullPhone);
 
@@ -170,11 +193,20 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    final fullPhone = _formatSriLankaPhone(phone);
+    if (fullPhone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 9-digit mobile number (e.g. 771234567)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
-
-    final fullPhone = '+94$phone';
 
     final result = await ApiService.verifyOtp(fullPhone, otp);
 

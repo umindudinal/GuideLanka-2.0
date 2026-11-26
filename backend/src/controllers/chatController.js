@@ -6,6 +6,10 @@ const sendMessage = async (req, res) => {
 
     const final_sender_id = req?.user?.id || sender_id;
 
+    if (!booking_id || !text || !text.toString().trim()) {
+        return res.status(400).json({ success: false, error: "Booking ID and non-empty message text are required" });
+    }
+
     if (!final_sender_id) {
         return res.status(400).json({ success: false, error: "Sender ID is missing" });
     }

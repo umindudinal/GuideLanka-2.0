@@ -1,10 +1,11 @@
 const express = require('express');
 const { receiveAlert, createSOSAlert, getActiveAlerts } = require('../controllers/alertController');
+const authMiddleware = require('../middlewares/authMiddleware');
 const router = express.Router();
 
-router.post('/', receiveAlert);
+router.post('/', authMiddleware, receiveAlert);
 
-router.post('/sos', createSOSAlert);
+router.post('/sos', authMiddleware, createSOSAlert);
 
 router.get('/', getActiveAlerts);
 

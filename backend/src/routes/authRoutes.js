@@ -1,4 +1,5 @@
 const express = require('express');
+const authMiddleware = require('../middlewares/authMiddleware');
 const {
     registerUser,
     loginUser,
@@ -30,6 +31,6 @@ router.get('/test', (req, res) => {
     res.send("✅ Auth routes are perfectly working!");
 });
 
-router.post('/change-password', changePassword);
+router.post('/change-password', authMiddleware, changePassword);
 
 module.exports = router;

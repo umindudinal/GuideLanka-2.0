@@ -592,8 +592,9 @@ export default function BookingForm() {
       return;
     }
 
-    if (!contactPhone || contactPhone.trim().length < 7) {
-      showAlert("Please enter a valid contact phone number so your safari guide can coordinate pickup and gate clearances.", "warning", "Phone Number Required");
+    const phoneDigits = contactPhone ? contactPhone.replace(/\D/g, '') : '';
+    if (!contactPhone || /[a-zA-Z]/.test(contactPhone) || phoneDigits.length < 9 || phoneDigits.length > 15) {
+      showAlert("Please enter a valid contact phone number (9–15 digits, e.g. +94771234567) so your safari guide can coordinate pickup and gate clearances.", "warning", "Phone Number Required");
       return;
     }
 

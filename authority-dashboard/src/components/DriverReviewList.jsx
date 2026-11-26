@@ -180,9 +180,13 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
           apiPayload.profile_image = editImageBase64;
         }
 
+        const token = localStorage.getItem('token');
         await fetch(`${API_BASE_URL}/api/driver/${driver.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
           body: JSON.stringify(apiPayload)
         });
       } catch (apiErr) {
@@ -244,8 +248,10 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/api/driver/${driver.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete driver.');
