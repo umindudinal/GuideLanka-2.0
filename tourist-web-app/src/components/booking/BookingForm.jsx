@@ -696,6 +696,17 @@ export default function BookingForm() {
 
       const newBooking = bookingData[0];
 
+      // Notify assigned safari driver via OneSignal push notification (non-blocking)
+      try {
+        await fetch(`${API_BASE_URL}/api/bookings/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: newBooking.id }),
+        });
+      } catch (notifyErr) {
+        console.warn('Booking notification dispatch warning:', notifyErr);
+      }
+
       setSuccessBookingData({
         id: newBooking.id,
         booking_date: date,

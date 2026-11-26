@@ -2,12 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Coordinates OneSignal notification events for sighting alerts across the app.
+/// Coordinates OneSignal notification events for sighting and booking alerts across the app.
 class NotificationService {
   static final ValueNotifier<Map<String, dynamic>?> pendingSightingTap =
       ValueNotifier<Map<String, dynamic>?>(null);
 
+  static final ValueNotifier<Map<String, dynamic>?> pendingBookingTap =
+      ValueNotifier<Map<String, dynamic>?>(null);
+
   static final ValueNotifier<int> sightingRefreshTick = ValueNotifier<int>(0);
+  static final ValueNotifier<int> bookingRefreshTick = ValueNotifier<int>(0);
 
   static bool _listenersInitialized = false;
 
@@ -18,15 +22,21 @@ class NotificationService {
 
     OneSignal.Notifications.addForegroundWillDisplayListener((event) {
       final data = event.notification.additionalData;
-      if (data != null && data['type'] == 'NEW_SIGHTING') {
+      final type = data?['type'];
+      if (type == 'NEW_SIGHTING') {
         sightingRefreshTick.value++;
+      } else if (type == 'NEW_BOOKING') {
+        bookingRefreshTick.value++;
       }
     });
 
     OneSignal.Notifications.addClickListener((event) {
       final data = event.notification.additionalData;
-      if (data != null && data['type'] == 'NEW_SIGHTING') {
-        pendingSightingTap.value = Map<String, dynamic>.from(data);
+      final type = data?['type'];
+      if (type == 'NEW_SIGHTING') {
+        pendingSightingTap.value = Map<String, dynamic>.from(data!);
+      } else if (type == 'NEW_BOOKING') {
+        pendingBookingTap.value = Map<String, dynamic>.from(data!);
       }
     });
   }
@@ -42,5 +52,9 @@ class NotificationService {
 
   static void clearPendingSightingTap() {
     pendingSightingTap.value = null;
+  }
+
+  static void clearPendingBookingTap() {
+    pendingBookingTap.value = null;
   }
 }

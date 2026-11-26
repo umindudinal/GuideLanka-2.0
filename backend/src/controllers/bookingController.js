@@ -1,4 +1,40 @@
 const supabase = require('../config/supabaseClient');
+const { sendPushNotification } = require('../utils/pushNotifier');
+
+const formatSlotLabel = (slotStr) => {
+    if (!slotStr) return 'Safari';
+    const prefix = slotStr.split('|')[0].toLowerCase().trim();
+    if (prefix.includes('morning')) return 'Morning';
+    if (prefix.includes('evening')) return 'Evening';
+    if (prefix.includes('full')) return 'Full Day';
+    return prefix;
+};
+
+const notifyDriverOfNewBooking = async (booking, touristName) => {
+    if (!booking || !booking.driver_id) return;
+    try {
+        const slotLabel = formatSlotLabel(booking.time_slot);
+        const guestCount = Number(booking.tourist_count) || 1;
+        const guestWord = guestCount === 1 ? 'guest' : 'guests';
+        const senderLabel = touristName && touristName.trim() ? touristName.trim() : 'A tourist';
+
+        await sendPushNotification(
+            booking.driver_id,
+            `${senderLabel} requested a ${slotLabel} safari on ${booking.booking_date} (${guestCount} ${guestWord}).`,
+            {
+                title: '🚙 New Safari Booking Request!',
+                data: {
+                    type: 'NEW_BOOKING',
+                    booking_id: booking.id ? booking.id.toString() : '',
+                    booking_date: booking.booking_date || '',
+                    time_slot: booking.time_slot || '',
+                },
+            }
+        );
+    } catch (notifyErr) {
+        console.error('⚠️ Failed to send booking push notification:', notifyErr);
+    }
+};
 
 const normalizeSlot = (slotStr) => {
     if (!slotStr) return 'full';
@@ -105,9 +141,22 @@ const createBooking = async (req, res) => {
 
         if (error) throw error;
 
+        const savedBooking = data[0];
+        let touristName = 'A tourist';
+        try {
+            const { data: touristRow } = await supabase
+                .from('users')
+                .select('full_name')
+                .eq('id', tourist_id)
+                .maybeSingle();
+            if (touristRow?.full_name) touristName = touristRow.full_name;
+        } catch (_) {}
+
+        await notifyDriverOfNewBooking(savedBooking, touristName);
+
         res.status(201).json({
             message: "Booking created successfully!",
-            booking: data[0]
+            booking: savedBooking
         });
 
     } catch (err) {
@@ -241,4 +290,48 @@ const cancelBooking = async (req, res) => {
     }
 };
 
-module.exports = { createBooking, updateBookingStatus, getBookings, cancelBooking };
+const notifyNewBooking = async (req, res) => {
+    const { booking_id } = req.body;
+
+    if (!booking_id) {
+        return res.status(400).json({ success: false, error: 'Booking ID is required.' });
+    }
+
+    try {
+        const { data: booking, error } = await supabase
+            .from('bookings')
+            .select('id, driver_id, tourist_id, booking_date, time_slot, tourist_count, status')
+            .eq('id', booking_id)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!booking) {
+            return res.status(404).json({ success: false, error: 'Booking not found.' });
+        }
+
+        if (booking.status && booking.status.toUpperCase() !== 'PENDING') {
+            return res.status(200).json({ success: true, message: 'Booking already processed; notification skipped.' });
+        }
+
+        let touristName = 'A tourist';
+        if (booking.tourist_id) {
+            const { data: touristRow } = await supabase
+                .from('users')
+                .select('full_name')
+                .eq('id', booking.tourist_id)
+                .maybeSingle();
+            if (touristRow?.full_name) {
+                touristName = touristRow.full_name;
+            }
+        }
+
+        await notifyDriverOfNewBooking(booking, touristName);
+
+        res.status(200).json({ success: true, message: 'Driver notified of new booking.' });
+    } catch (err) {
+        console.error('💥 Error notifying driver of booking:', err);
+        res.status(500).json({ success: false, error: 'Server Error', details: err.message });
+    }
+};
+
+module.exports = { createBooking, updateBookingStatus, getBookings, cancelBooking, notifyNewBooking };

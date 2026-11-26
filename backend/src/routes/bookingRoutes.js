@@ -1,11 +1,13 @@
 const express = require('express');
-const { createBooking, updateBookingStatus, getBookings, cancelBooking } = require('../controllers/bookingController');
+const { createBooking, updateBookingStatus, getBookings, cancelBooking, notifyNewBooking } = require('../controllers/bookingController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const authorizeRoles = require('../middlewares/roleMiddleware');
 
 const router = express.Router();
 
 router.post('/', authMiddleware, authorizeRoles('TOURIST'), createBooking);
+
+router.post('/notify', notifyNewBooking);
 
 router.patch('/:id/cancel', authMiddleware, authorizeRoles('TOURIST'), cancelBooking);
 

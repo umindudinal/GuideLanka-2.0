@@ -162,6 +162,16 @@ async function runTests() {
     assert.strictEqual(resInvalid.statusCode, 400);
   });
 
+  test('notifyNewBooking rejects missing booking_id (400) and missing booking (404)', async () => {
+    const resMissing = makeRes();
+    await bookingController.notifyNewBooking({ body: {} }, resMissing);
+    assert.strictEqual(resMissing.statusCode, 400);
+
+    const resNotFound = makeRes();
+    await bookingController.notifyNewBooking({ body: { booking_id: 'nonexistent' } }, resNotFound);
+    assert.strictEqual(resNotFound.statusCode, 404);
+  });
+
   // Sighting, Alert, Route validation
   test('logSighting rejects missing fields (400)', async () => {
     const res = makeRes();

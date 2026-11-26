@@ -47,15 +47,37 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadDriverName();
     _fetchBookings();
     NotificationService.pendingSightingTap.addListener(_handlePendingSightingTap);
+    NotificationService.pendingBookingTap.addListener(_handlePendingBookingTap);
+    NotificationService.bookingRefreshTick.addListener(_onForegroundBookingRefresh);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingSightingTap();
+      _handlePendingBookingTap();
     });
   }
 
   @override
   void dispose() {
     NotificationService.pendingSightingTap.removeListener(_handlePendingSightingTap);
+    NotificationService.pendingBookingTap.removeListener(_handlePendingBookingTap);
+    NotificationService.bookingRefreshTick.removeListener(_onForegroundBookingRefresh);
     super.dispose();
+  }
+
+  void _onForegroundBookingRefresh() {
+    if (mounted) {
+      _fetchBookings();
+    }
+  }
+
+  void _handlePendingBookingTap() {
+    final data = NotificationService.pendingBookingTap.value;
+    if (data == null || !mounted) return;
+
+    NotificationService.clearPendingBookingTap();
+    setState(() {
+      _selectedIndex = 0;
+    });
+    _fetchBookings();
   }
 
   void _handlePendingSightingTap() {
