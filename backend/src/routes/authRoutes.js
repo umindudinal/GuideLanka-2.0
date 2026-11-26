@@ -4,6 +4,8 @@ const {
     registerUser,
     loginUser,
     changePassword,
+    forgotPassword,
+    resetPassword,
     sendOtp,
     verifyOtp,
     sendEmailOtp,
@@ -32,5 +34,9 @@ router.get('/test', (req, res) => {
 });
 
 router.post('/change-password', authMiddleware, changePassword);
+
+router.post('/forgot-password', forgotPassword);
+
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

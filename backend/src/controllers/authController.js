@@ -1,10 +1,12 @@
 const supabase = require('../config/supabaseClient');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { sendSMS } = require('../utils/smsSender');
-const { sendVerificationEmail } = require('../utils/emailSender');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailSender');
 
 const emailOtpStore = {};
+const passwordResetOtpStore = {};
 
 const isStrongPassword = (pwd) => {
     if (!pwd || typeof pwd !== 'string') return false;
@@ -490,10 +492,166 @@ const registerAuthority = async (req, res) => {
     }
 };
 
+const buildResetOtpHash = (cleanEmail, otp) => {
+    const secret = process.env.JWT_SECRET || 'guidelanka-reset-secret';
+    return crypto.createHmac('sha256', secret).update(`${cleanEmail}:${otp}`).digest('hex');
+};
+
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email || !email.toString().includes('@')) {
+        return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
+    }
+
+    const cleanEmail = email.toString().trim().toLowerCase();
+
+    try {
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('id, email, role')
+            .eq('email', cleanEmail)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'No account found with this email address.' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        passwordResetOtpStore[cleanEmail] = {
+            otp,
+            expires: Date.now() + 10 * 60 * 1000,
+        };
+
+        const secret = process.env.JWT_SECRET || 'guidelanka-reset-secret';
+        const reset_token = jwt.sign(
+            {
+                email: cleanEmail,
+                otpHash: buildResetOtpHash(cleanEmail, otp),
+                purpose: 'PASSWORD_RESET',
+            },
+            secret,
+            { expiresIn: '10m' }
+        );
+
+        const emailSent = await sendPasswordResetEmail(cleanEmail, otp);
+
+        return res.status(200).json({
+            success: true,
+            message: emailSent
+                ? 'A 6-digit password reset code has been sent to your email.'
+                : 'Reset code generated (email delivery unavailable; check server console).',
+            reset_token,
+        });
+    } catch (err) {
+        console.error('💥 Forgot Password Error:', err);
+        return res.status(500).json({ success: false, error: 'Server error while processing password reset request.' });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { email, otp, new_password, reset_token } = req.body;
+
+    if (!email || !otp || !new_password) {
+        return res.status(400).json({
+            success: false,
+            error: 'Email, verification code, and new password are required.',
+        });
+    }
+
+    if (!isStrongPassword(new_password)) {
+        return res.status(400).json({
+            success: false,
+            error: 'Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.',
+        });
+    }
+
+    const cleanEmail = email.toString().trim().toLowerCase();
+    const cleanOtp = otp.toString().trim();
+
+    let isOtpValid = false;
+
+    if (reset_token) {
+        try {
+            const secret = process.env.JWT_SECRET || 'guidelanka-reset-secret';
+            const decoded = jwt.verify(reset_token, secret);
+            if (
+                decoded &&
+                decoded.purpose === 'PASSWORD_RESET' &&
+                decoded.email === cleanEmail &&
+                decoded.otpHash === buildResetOtpHash(cleanEmail, cleanOtp)
+            ) {
+                isOtpValid = true;
+            }
+        } catch (tokenErr) {
+            if (tokenErr.name === 'TokenExpiredError') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Verification code has expired. Please request a new code.',
+                });
+            }
+        }
+    }
+
+    if (!isOtpValid) {
+        const record = passwordResetOtpStore[cleanEmail];
+        if (record) {
+            if (Date.now() > record.expires) {
+                delete passwordResetOtpStore[cleanEmail];
+                return res.status(400).json({
+                    success: false,
+                    error: 'Verification code has expired. Please request a new code.',
+                });
+            }
+            if (record.otp === cleanOtp) {
+                isOtpValid = true;
+            }
+        }
+    }
+
+    if (!isOtpValid) {
+        return res.status(400).json({
+            success: false,
+            error: 'Invalid or expired verification code.',
+        });
+    }
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(new_password, salt);
+
+        const { data: updatedUser, error: updateError } = await supabase
+            .from('users')
+            .update({ password: hashedPassword })
+            .eq('email', cleanEmail)
+            .select('id')
+            .maybeSingle();
+
+        if (updateError) throw updateError;
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, error: 'Account not found.' });
+        }
+
+        delete passwordResetOtpStore[cleanEmail];
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset successfully! Please sign in with your new password.',
+        });
+    } catch (err) {
+        console.error('💥 Reset Password Error:', err);
+        return res.status(500).json({ success: false, error: 'Server error while resetting password.' });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     changePassword,
+    forgotPassword,
+    resetPassword,
     sendOtp,
     verifyOtp,
     sendEmailOtp,

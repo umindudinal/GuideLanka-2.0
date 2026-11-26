@@ -132,6 +132,28 @@ async function runTests() {
     assert.strictEqual(res.statusCode, 400);
   });
 
+  test('forgotPassword & resetPassword validate email, OTP, and password strength (400/404)', async () => {
+    const resInvalidEmail = makeRes();
+    await authController.forgotPassword({ body: { email: 'not-an-email' } }, resInvalidEmail);
+    assert.strictEqual(resInvalidEmail.statusCode, 400);
+
+    const resUnknownEmail = makeRes();
+    await authController.forgotPassword({ body: { email: 'unknown@example.com' } }, resUnknownEmail);
+    assert.strictEqual(resUnknownEmail.statusCode, 404);
+
+    const resWeakReset = makeRes();
+    await authController.resetPassword({
+      body: { email: 'driver@example.com', otp: '123456', new_password: 'weak' },
+    }, resWeakReset);
+    assert.strictEqual(resWeakReset.statusCode, 400);
+
+    const resBadOtp = makeRes();
+    await authController.resetPassword({
+      body: { email: 'driver@example.com', otp: '000000', new_password: 'Strong!Password1' },
+    }, resBadOtp);
+    assert.strictEqual(resBadOtp.statusCode, 400);
+  });
+
   // Booking validation
   test('createBooking rejects missing/invalid booking_date and past dates (400)', async () => {
     const resMissing = makeRes();

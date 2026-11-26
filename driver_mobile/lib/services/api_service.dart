@@ -153,6 +153,81 @@ class ApiService {
     }
   }
 
+  static Map<String, dynamic>? _tryDecodeJson(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim()}),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = _tryDecodeJson(response.body);
+      if (response.statusCode == 200 && data != null && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Reset code sent to your email.',
+          'reset_token': data['reset_token'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': data?['error'] ??
+              data?['message'] ??
+              'Server error (${response.statusCode}). Please ensure the backend is updated.',
+        };
+      }
+    } catch (e) {
+      debugPrint("💥 Error requesting password reset: $e");
+      return {'success': false, 'error': 'Cannot connect to server. Check your network.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    String? resetToken,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          'otp': otp.trim(),
+          'new_password': newPassword,
+          'reset_token': ?resetToken,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = _tryDecodeJson(response.body);
+      if (response.statusCode == 200 && data != null && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Password reset successfully!',
+        };
+      } else {
+        return {
+          'success': false,
+          'error': data?['error'] ??
+              data?['message'] ??
+              'Server error (${response.statusCode}). Please ensure the backend is updated.',
+        };
+      }
+    } catch (e) {
+      debugPrint("💥 Error resetting password: $e");
+      return {'success': false, 'error': 'Cannot connect to server. Check your network.'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getDriverBookings() async {
     try {
       final prefs = await SharedPreferences.getInstance();

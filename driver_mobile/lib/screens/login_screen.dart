@@ -228,25 +228,31 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleForgotPassword() {
-    final email = _emailController.text.trim();
-
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter your email first to reset password.'),
-          backgroundColor: Colors.orange.shade800,
-        ),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('A password reset link has been sent to $email'),
-        backgroundColor: Colors.blue.shade700,
+  Future<void> _handleForgotPassword() async {
+    final resetEmail = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ForgotPasswordSheet(
+        initialEmail: _emailController.text.trim(),
       ),
     );
+
+    if (resetEmail != null && resetEmail.isNotEmpty && mounted) {
+      setState(() {
+        _activeTab = 1;
+        _emailController.text = resetEmail;
+        _passwordController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Password reset successfully! Please sign in with your new password.'),
+          backgroundColor: AppColors.online,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
+    }
   }
 
   @override
@@ -799,6 +805,329 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ForgotPasswordSheet extends StatefulWidget {
+  final String initialEmail;
+
+  const _ForgotPasswordSheet({required this.initialEmail});
+
+  @override
+  State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
+}
+
+class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
+  late final TextEditingController _emailCtrl;
+  final TextEditingController _otpCtrl = TextEditingController();
+  final TextEditingController _newPwdCtrl = TextEditingController();
+  final TextEditingController _confirmPwdCtrl = TextEditingController();
+
+  bool _codeSent = false;
+  bool _isBusy = false;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+  String? _resetToken;
+  String? _errorMsg;
+  String? _infoMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailCtrl = TextEditingController(text: widget.initialEmail);
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _otpCtrl.dispose();
+    _newPwdCtrl.dispose();
+    _confirmPwdCtrl.dispose();
+    super.dispose();
+  }
+
+  bool _isStrongPassword(String pwd) {
+    return pwd.length >= 8 &&
+        pwd.contains(RegExp(r'[A-Z]')) &&
+        pwd.contains(RegExp(r'[a-z]')) &&
+        pwd.contains(RegExp(r'[0-9]')) &&
+        pwd.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/~`]'));
+  }
+
+  Future<void> _sendCode() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() {
+        _errorMsg = 'Please enter a valid registered email address.';
+        _infoMsg = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isBusy = true;
+      _errorMsg = null;
+      _infoMsg = null;
+    });
+
+    final res = await ApiService.requestPasswordReset(email);
+    if (!mounted) return;
+
+    setState(() {
+      _isBusy = false;
+      if (res['success'] == true) {
+        _codeSent = true;
+        _resetToken = res['reset_token']?.toString();
+        _infoMsg = res['message']?.toString() ?? 'Verification code sent to $email.';
+      } else {
+        _errorMsg = res['error']?.toString() ?? 'Could not send reset code.';
+      }
+    });
+  }
+
+  Future<void> _submitReset() async {
+    final email = _emailCtrl.text.trim();
+    final otp = _otpCtrl.text.trim();
+    final newPwd = _newPwdCtrl.text;
+    final confirmPwd = _confirmPwdCtrl.text;
+
+    if (otp.length < 6) {
+      setState(() => _errorMsg = 'Please enter the 6-digit code sent to your email.');
+      return;
+    }
+    if (!_isStrongPassword(newPwd)) {
+      setState(() => _errorMsg = 'Password must be at least 8 characters with uppercase, lowercase, numbers, and symbols (!@#).');
+      return;
+    }
+    if (newPwd != confirmPwd) {
+      setState(() => _errorMsg = 'Passwords do not match.');
+      return;
+    }
+
+    setState(() {
+      _isBusy = true;
+      _errorMsg = null;
+    });
+
+    final res = await ApiService.resetPassword(
+      email: email,
+      otp: otp,
+      newPassword: newPwd,
+      resetToken: _resetToken,
+    );
+
+    if (!mounted) return;
+
+    if (res['success'] == true) {
+      Navigator.of(context).pop(email);
+    } else {
+      setState(() {
+        _isBusy = false;
+        _errorMsg = res['error']?.toString() ?? 'Failed to reset password.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.lock_reset_rounded, color: AppColors.primary, size: 26),
+                      SizedBox(width: 8),
+                      Text(
+                        'Reset Password',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: _isBusy ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _codeSent
+                    ? 'Enter the 6-digit code sent to ${_emailCtrl.text.trim()} and choose a strong new password.'
+                    : 'Enter your registered driver email address to receive a 6-digit password reset code.',
+                style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 16),
+              if (_errorMsg != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Text(
+                    _errorMsg!,
+                    style: TextStyle(color: Colors.red.shade800, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              if (_infoMsg != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Text(
+                    _infoMsg!,
+                    style: TextStyle(color: Colors.green.shade900, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              TextField(
+                controller: _emailCtrl,
+                enabled: !_codeSent && !_isBusy,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Registered Email Address',
+                  prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
+                  filled: true,
+                  fillColor: _codeSent ? Colors.grey.shade100 : Colors.grey.shade50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              if (_codeSent) ...[
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _otpCtrl,
+                  enabled: !_isBusy,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    labelText: '6-Digit Verification Code',
+                    counterText: '',
+                    prefixIcon: const Icon(Icons.pin_outlined, color: AppColors.primary),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _newPwdCtrl,
+                  enabled: !_isBusy,
+                  obscureText: _obscureNew,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    hintText: 'Min 8 chars (Aa, 0-9, !@#)',
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _confirmPwdCtrl,
+                  enabled: !_isBusy,
+                  obscureText: _obscureConfirm,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: _isBusy
+                          ? null
+                          : () => setState(() {
+                                _codeSent = false;
+                                _otpCtrl.clear();
+                                _errorMsg = null;
+                                _infoMsg = null;
+                              }),
+                      child: const Text('Change Email', style: TextStyle(color: AppColors.textMuted)),
+                    ),
+                    TextButton(
+                      onPressed: _isBusy ? null : _sendCode,
+                      child: const Text(
+                        'Resend Code',
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isBusy ? null : (_codeSent ? _submitReset : _sendCode),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _isBusy
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Text(
+                          _codeSent ? 'Reset Password' : 'Send Reset Code',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

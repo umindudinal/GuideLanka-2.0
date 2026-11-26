@@ -78,4 +78,67 @@ const sendVerificationEmail = async (email, otp, roleTitle = 'Safari Driver') =>
     return false;
 };
 
-module.exports = { sendVerificationEmail };
+const sendPasswordResetEmail = async (email, otp) => {
+    console.log(`[EMAIL SENDER] Attempting to send password reset email to: ${email}`);
+
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT || 587;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
+
+    const emailSubject = 'GuideLanka Driver Password Reset Code';
+
+    if (smtpHost && smtpUser && smtpPass) {
+        try {
+            const transporter = nodemailer.createTransport({
+                host: smtpHost,
+                port: parseInt(smtpPort),
+                secure: parseInt(smtpPort) === 465,
+                connectionTimeout: 5000,
+                greetingTimeout: 5000,
+                socketTimeout: 5000,
+                auth: {
+                    user: smtpUser,
+                    pass: smtpPass
+                }
+            });
+
+            const mailOptions = {
+                from: `"GuideLanka System" <${smtpUser}>`,
+                to: email,
+                subject: emailSubject,
+                html: `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: auto; padding: 32px 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <h2 style="color: #024C25; font-size: 22px; font-weight: 800; margin: 0 0 6px 0;">Password Reset Request</h2>
+                            <p style="color: #64748b; font-size: 13px; margin: 0;">GuideLanka Driver Portal</p>
+                        </div>
+                        <p style="color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">Hello,</p>
+                        <p style="color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">Use the following 6-digit code in the GuideLanka Driver App to reset your password:</p>
+                        <div style="text-align: center; margin: 28px 0;">
+                            <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; background-color: #ecfdf5; padding: 14px 28px; border-radius: 12px; border: 1.5px solid #a7f3d0; color: #065f46; display: inline-block;">${otp}</span>
+                        </div>
+                        <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin-bottom: 24px; text-align: center;">⏱️ This reset code expires in <strong>10 minutes</strong>.<br>If you did not request a password reset, you can safely ignore this email.</p>
+                        <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;" />
+                        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">&copy; 2026 GuideLanka Safari &amp; Park Authority Operations Portal</p>
+                    </div>
+                `
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`✅ Password reset email sent successfully: ${info.messageId}`);
+            return true;
+        } catch (err) {
+            console.error('❌ Failed to send password reset email via SMTP, falling back to console:', err);
+        }
+    }
+
+    console.log(`\n====================================`);
+    console.log(`[PASSWORD RESET EMAIL FALLBACK]`);
+    console.log(`To: ${email}`);
+    console.log(`Reset OTP Code: ${otp}`);
+    console.log(`====================================\n`);
+    return false;
+};
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };

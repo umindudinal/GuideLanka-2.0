@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'login_screen.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'help_support_screen.dart';
 import 'history_screen.dart';
 import '../widgets/theme_constants.dart';
@@ -48,6 +49,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
 
     _loadProfileData();
+    NotificationService.profileRefreshTick.addListener(_onProfileRefresh);
+  }
+
+  @override
+  void dispose() {
+    NotificationService.profileRefreshTick.removeListener(_onProfileRefresh);
+    super.dispose();
+  }
+
+  void _onProfileRefresh() {
+    if (mounted) {
+      _loadProfileData();
+    }
   }
 
   Future<void> _loadProfileData() async {

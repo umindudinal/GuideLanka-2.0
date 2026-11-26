@@ -1,6 +1,7 @@
 const supabase = require('../config/supabaseClient');
 const fs = require('fs');
 const path = require('path');
+const { sendPushNotification } = require('../utils/pushNotifier');
 
 exports.getDriverProfile = async (req, res) => {
     try {
@@ -317,19 +318,45 @@ exports.addDriverReview = async (req, res) => {
             return res.status(400).json({ success: false, error: "Rating must be between 1 and 5." });
         }
 
+        const reviewerName = (tourist_name && tourist_name.toString().trim()) || 'Anonymous Explorer';
+        const cleanComment = comment.toString().trim();
+
         const { data: newReview, error } = await supabase
             .from('driver_reviews')
             .insert([{
                 driver_id: driverId,
                 rating: numRating,
-                comment: comment.toString().trim(),
-                tourist_name: tourist_name || 'Anonymous Explorer',
+                comment: cleanComment,
+                tourist_name: reviewerName,
                 tourist_email: tourist_email || 'anonymous@guidelanka.com'
             }])
             .select()
             .single();
 
         if (error) throw error;
+
+        try {
+            const preview = cleanComment.length > 90
+                ? `${cleanComment.slice(0, 87)}...`
+                : cleanComment;
+            await sendPushNotification(
+                driverId,
+                `${reviewerName} rated you ${numRating}/5: "${preview}"`,
+                {
+                    title: `⭐ New ${numRating}-Star Review!`,
+                    data: {
+                        type: 'NEW_REVIEW',
+                        driver_id: driverId ? driverId.toString() : '',
+                        review_id: newReview?.id ? newReview.id.toString() : '',
+                        rating: numRating,
+                        tourist_name: reviewerName,
+                        comment: preview,
+                    },
+                }
+            );
+        } catch (notifyErr) {
+            console.error('⚠️ Failed to send review push notification:', notifyErr);
+        }
 
         res.status(201).json({ success: true, review: newReview });
     } catch (error) {

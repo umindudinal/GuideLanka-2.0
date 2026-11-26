@@ -48,10 +48,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchBookings();
     NotificationService.pendingSightingTap.addListener(_handlePendingSightingTap);
     NotificationService.pendingBookingTap.addListener(_handlePendingBookingTap);
+    NotificationService.pendingReviewTap.addListener(_handlePendingReviewTap);
     NotificationService.bookingRefreshTick.addListener(_onForegroundBookingRefresh);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingSightingTap();
       _handlePendingBookingTap();
+      _handlePendingReviewTap();
     });
   }
 
@@ -59,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     NotificationService.pendingSightingTap.removeListener(_handlePendingSightingTap);
     NotificationService.pendingBookingTap.removeListener(_handlePendingBookingTap);
+    NotificationService.pendingReviewTap.removeListener(_handlePendingReviewTap);
     NotificationService.bookingRefreshTick.removeListener(_onForegroundBookingRefresh);
     super.dispose();
   }
@@ -78,6 +81,28 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedIndex = 0;
     });
     _fetchBookings();
+  }
+
+  void _handlePendingReviewTap() {
+    final data = NotificationService.pendingReviewTap.value;
+    if (data == null || !mounted) return;
+
+    NotificationService.clearPendingReviewTap();
+    setState(() {
+      _selectedIndex = 4;
+    });
+    NotificationService.profileRefreshTick.value++;
+
+    final rating = data['rating']?.toString() ?? '5';
+    final reviewer = data['tourist_name']?.toString() ?? 'A tourist';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⭐ $reviewer left you a $rating-star review!'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _handlePendingSightingTap() {
