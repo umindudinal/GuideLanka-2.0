@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Live API](https://img.shields.io/badge/API-Live_on_Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://guide-lanka-backend.vercel.app)
+[![Live API](https://img.shields.io/badge/API-Live_on_Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://guidelanka-20-backend.vercel.app)
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express.js-v5.0-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![React](https://img.shields.io/badge/React-v19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
@@ -199,7 +199,7 @@ Responsive traveler portal built with React 19 and Tailwind CSS v4:
   * Touch-manipulated interactions and responsive navigation drawer with body scroll lock.
 
 ### 4. ⚙️ Central Cloud API (`/backend`)
-* **Production Deployment**: Hosted on Vercel at [`https://guide-lanka-backend.vercel.app`](https://guide-lanka-backend.vercel.app).
+* **Production Deployment**: Hosted on Vercel at [`https://guidelanka-20-backend.vercel.app`](https://guidelanka-20-backend.vercel.app).
 * **RESTful MVC Architecture**: Scalable controllers, middlewares, routes, and services built with Express 5 on Node.js v20+.
 * **Database & Auth**: Supabase PostgreSQL integration with JWT-authenticated RBAC.
 * **Multi-Channel Dispatch**: Automated SMS OTP delivery (NotifyLK), push notifications (OneSignal), and transactional emails (Nodemailer).
@@ -284,8 +284,8 @@ GuideLanka/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/umindudinal/GuideLanka-New.git
-cd GuideLanka-New
+git clone https://github.com/umindudinal/GuideLanka-2.0.git
+cd GuideLanka-2.0
 ```
 
 ---
@@ -326,7 +326,7 @@ Start the backend:
 npm run dev
 # Server running on http://localhost:5000
 ```
-> **Note:** The backend is also deployed live at `https://guide-lanka-backend.vercel.app`.
+> **Note:** The backend is also deployed live at `https://guidelanka-20-backend.vercel.app`.
 
 ---
 
@@ -348,7 +348,7 @@ Run locally:
 npm run dev
 # Dashboard available on http://localhost:5173
 ```
-> ⚡ **Smart API Routing:** During `npm run dev`, API requests automatically default to the local backend (`http://localhost:5000`). In production builds, it seamlessly routes to the cloud backend (`https://guide-lanka-backend.vercel.app`).
+> ⚡ **Smart API Routing:** During `npm run dev`, API requests automatically default to the local backend (`http://localhost:5000`). In production builds, it seamlessly routes to the cloud backend (`https://guidelanka-20-backend.vercel.app`).
 
 ---
 
@@ -406,7 +406,7 @@ driver_mobile/build/app/outputs/flutter-apk/app-release.apk
 #### Transfer & Install:
 1. Copy `app-release.apk` to your Android device via USB cable, Google Drive, or local file sharing.
 2. Open the file on your device and tap **Install** (allow "Install Unknown Apps" in device settings if prompted).
-3. The application connects directly to the live cloud backend (`https://guide-lanka-backend.vercel.app`), enabling instant testing over cellular data or Wi-Fi.
+3. The application connects directly to the live cloud backend (`https://guidelanka-20-backend.vercel.app`), enabling instant testing over cellular data or Wi-Fi.
 
 ---
 

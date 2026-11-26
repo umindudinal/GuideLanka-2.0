@@ -6,7 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
 
   static String get baseUrl {
-    return 'http://192.168.43.154:5000/api';
+    return const String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'https://guidelanka-20-backend.vercel.app/api',
+    );
   }
 
   static Future<Map<String, dynamic>> loginDriver(String email, String password) async {
