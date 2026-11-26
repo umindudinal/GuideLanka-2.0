@@ -42,6 +42,7 @@ import {
   getCountryClassification,
   getCountryFlagUrl 
 } from '../../data/countries';
+import { sanitizePhoneInput } from '../../utils/helpers';
 
 function GuideAvatarItem({ driver, size = "w-12 h-12", textSize = "text-base", rounded = "rounded-xl" }) {
   const [hasError, setHasError] = useState(false);
@@ -1166,10 +1167,12 @@ export default function BookingForm() {
                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
                 <input
                   type="tel"
+                  inputMode="tel"
+                  maxLength={16}
                   required
-                  placeholder="e.g. +94 77 123 4567 or +1 (555) 019-2834"
+                  placeholder="e.g. 0771234567 or +94771234567"
                   value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
+                  onChange={(e) => setContactPhone(sanitizePhoneInput(e.target.value))}
                   className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#024C25] focus:bg-white text-sm font-semibold text-gray-800 transition"
                 />
               </div>

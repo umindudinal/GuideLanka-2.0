@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import 'help_support_screen.dart';
 import 'history_screen.dart';
+import 'reviews_screen.dart';
 import '../widgets/theme_constants.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -799,7 +800,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(child: _buildStatCard(Icons.account_balance_wallet_rounded, "LKR ${_formatCurrency(_revenue)}", 'Earnings', iconColor: AppColors.accent, subtext: 'Gross')),
                   const SizedBox(width: 10),
 
-                  Expanded(child: _buildStatCard(Icons.star_rounded, "$_rating ★", 'Rating', iconColor: Colors.amber.shade700, subtext: '5-Star Avg')),
+                  Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ReviewsScreen()),
+                        );
+                      },
+                      child: _buildStatCard(Icons.star_rounded, "$_rating ★", 'Rating', iconColor: Colors.amber.shade700, subtext: 'Tap for Reviews'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -868,6 +880,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const HistoryScreen()),
+                    );
+                  }),
+
+                  _buildMenuOption(Icons.rate_review_rounded, 'Tourist Reviews & Replies', 'Read guest feedback and post replies', () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ReviewsScreen()),
                     );
                   }),
 

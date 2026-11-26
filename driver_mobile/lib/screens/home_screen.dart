@@ -9,6 +9,7 @@ import 'chat_screen.dart';
 import 'safari_map_screen.dart';
 import 'emergency_screen.dart';
 import 'history_screen.dart';
+import 'reviews_screen.dart';
 
 import '../widgets/theme_constants.dart';
 
@@ -103,6 +104,14 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(seconds: 4),
       ),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ReviewsScreen()),
+      );
+    });
   }
 
   void _handlePendingSightingTap() {

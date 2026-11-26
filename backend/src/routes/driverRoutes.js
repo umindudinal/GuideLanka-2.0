@@ -12,6 +12,10 @@ router.patch('/status', authMiddleware, driverController.updateDriverStatus);
 
 router.post('/profile/picture', authMiddleware, driverController.uploadProfilePicture);
 
+router.get('/reviews', authMiddleware, authorizeRoles('DRIVER'), driverController.getMyReviews);
+
+router.post('/reviews/:reviewId/reply', authMiddleware, authorizeRoles('DRIVER'), driverController.replyToReview);
+
 router.get('/:driverId/reviews', driverController.getDriverReviews);
 
 router.post('/:driverId/reviews', driverController.addDriverReview);

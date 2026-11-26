@@ -680,4 +680,69 @@ class ApiService {
       return {'success': false, 'error': 'Network error. Please try again.'};
     }
   }
+
+  static Future<Map<String, dynamic>> getMyReviews() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        return {'success': false, 'error': 'No token found. Please login again.'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/driver/reviews'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 12));
+
+      final data = _tryDecodeJson(response.body);
+      if (response.statusCode == 200 && data != null && data['success'] == true) {
+        return {'success': true, 'reviews': data['reviews'] ?? []};
+      } else {
+        return {
+          'success': false,
+          'error': data?['error'] ?? 'Failed to load reviews (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint("💥 Error fetching reviews: $e");
+      return {'success': false, 'error': 'Cannot connect to server. Check your network.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> replyToReview(String reviewId, String reply) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        return {'success': false, 'error': 'No token found. Please login again.'};
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/driver/reviews/$reviewId/reply'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'reply': reply.trim()}),
+      ).timeout(const Duration(seconds: 12));
+
+      final data = _tryDecodeJson(response.body);
+      if (response.statusCode == 200 && data != null && data['success'] == true) {
+        return {'success': true, 'review': data['review']};
+      } else {
+        return {
+          'success': false,
+          'error': data?['error'] ?? 'Failed to post reply (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      debugPrint("💥 Error replying to review: $e");
+      return {'success': false, 'error': 'Cannot connect to server. Check your network.'};
+    }
+  }
 }

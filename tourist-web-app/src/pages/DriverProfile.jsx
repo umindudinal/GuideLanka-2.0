@@ -772,6 +772,28 @@ export default function DriverProfile() {
                       <p className="text-gray-700 text-xs font-medium leading-relaxed pl-2.5 border-l-2 border-emerald-500 bg-white p-2 rounded-r-xl border-y border-r">
                         "{rev.comment}"
                       </p>
+
+                      {rev.driver_reply && (
+                        <div className="ml-3 p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#024C25]">
+                              Guide Reply ({driver.full_name?.split(' ')[0] || 'Driver'})
+                            </span>
+                            {rev.replied_at && (
+                              <span className="text-[10px] text-gray-400 font-medium">
+                                {new Date(rev.replied_at).toLocaleDateString(undefined, {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-700 text-xs font-medium leading-relaxed">
+                            {rev.driver_reply}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

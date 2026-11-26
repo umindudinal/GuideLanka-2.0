@@ -244,6 +244,24 @@ async function runTests() {
     assert.strictEqual(resRange.statusCode, 400);
   });
 
+  test('replyToReview rejects empty reply (400) and non-owned/missing review (404)', async () => {
+    const resEmpty = makeRes();
+    await driverController.replyToReview({
+      user: { id: 'd1' },
+      params: { reviewId: 'r1' },
+      body: { reply: '   ' },
+    }, resEmpty);
+    assert.strictEqual(resEmpty.statusCode, 400);
+
+    const resMissing = makeRes();
+    await driverController.replyToReview({
+      user: { id: 'd1' },
+      params: { reviewId: 'r1' },
+      body: { reply: 'Thank you for riding with me!' },
+    }, resMissing);
+    assert.strictEqual(resMissing.statusCode, 404);
+  });
+
   // Chat validation
   test('sendMessage rejects empty text or missing sender_id (400)', async () => {
     const resEmpty = makeRes();

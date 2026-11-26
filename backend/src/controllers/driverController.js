@@ -285,6 +285,86 @@ exports.updateDriverStatus = async (req, res) => {
     }
 };
 
+exports.getMyReviews = async (req, res) => {
+    try {
+        const driverId = req.user.id;
+
+        const { data: reviews, error } = await supabase
+            .from('driver_reviews')
+            .select('*')
+            .eq('driver_id', driverId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        res.status(200).json({ success: true, reviews: reviews || [] });
+    } catch (error) {
+        console.error("Error fetching driver's own reviews:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+};
+
+exports.replyToReview = async (req, res) => {
+    try {
+        const driverId = req.user.id;
+        const { reviewId } = req.params;
+        const { reply } = req.body;
+
+        if (!reviewId) {
+            return res.status(400).json({ success: false, error: "Review ID is required." });
+        }
+
+        if (!reply || !reply.toString().trim()) {
+            return res.status(400).json({ success: false, error: "Reply message cannot be empty." });
+        }
+
+        const cleanReply = reply.toString().trim();
+
+        const { data: existingReview, error: findError } = await supabase
+            .from('driver_reviews')
+            .select('id, driver_id')
+            .eq('id', reviewId)
+            .eq('driver_id', driverId)
+            .maybeSingle();
+
+        if (findError) throw findError;
+
+        if (!existingReview) {
+            return res.status(404).json({ success: false, error: "Review not found for your account." });
+        }
+
+        const { data: updatedReview, error: updateError } = await supabase
+            .from('driver_reviews')
+            .update({
+                driver_reply: cleanReply,
+                replied_at: new Date().toISOString()
+            })
+            .eq('id', reviewId)
+            .eq('driver_id', driverId)
+            .select()
+            .single();
+
+        if (updateError) {
+            if (updateError.message && updateError.message.includes('driver_reply')) {
+                return res.status(500).json({
+                    success: false,
+                    error: "Database schema missing 'driver_reply' column on driver_reviews table."
+                });
+            }
+            throw updateError;
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Reply posted successfully!",
+            review: updatedReview
+        });
+    } catch (error) {
+        console.error("Error replying to driver review:", error);
+        res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
+};
+
 exports.getDriverReviews = async (req, res) => {
     try {
         const { driverId } = req.params;

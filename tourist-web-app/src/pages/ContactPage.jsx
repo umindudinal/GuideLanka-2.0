@@ -13,6 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { sanitizePhoneInput } from '../utils/helpers';
 import heroBg from '../assets/background.jpg';
 
 export default function ContactPage() {
@@ -135,9 +136,11 @@ export default function ContactPage() {
                       </label>
                       <input
                         type="tel"
-                        placeholder="e.g. +94 77 123 4567"
+                        inputMode="tel"
+                        maxLength={16}
+                        placeholder="e.g. 0771234567 or +94771234567"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, phone: sanitizePhoneInput(e.target.value) })}
                         className="w-full px-4 py-3 sm:py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-600 focus:bg-white text-sm font-medium text-gray-700 transition"
                       />
                     </div>

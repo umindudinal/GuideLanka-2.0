@@ -404,6 +404,12 @@ function DriverCard({ driver, onDriverDeleted, onDriverUpdated }) {
                     </span>
                   </div>
                   <p className="text-slate-400 mt-1">{r.comment}</p>
+                  {r.driver_reply && (
+                    <div className="mt-1.5 pl-2 border-l-2 border-emerald-500/60 text-emerald-300/90">
+                      <span className="font-bold text-[9px] uppercase tracking-wider block text-emerald-400">Driver Reply:</span>
+                      <span>{r.driver_reply}</span>
+                    </div>
+                  )}
                 </div>
               ))
             )}

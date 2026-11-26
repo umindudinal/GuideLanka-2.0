@@ -40,6 +40,7 @@ import { auth } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { API_BASE_URL } from '../services/apiConfig';
+import { sanitizePhoneInput } from '../utils/helpers';
 import heroBg from '../assets/background.jpg';
 
 export default function UserProfile() {
@@ -205,13 +206,20 @@ export default function UserProfile() {
       return;
     }
 
+    const sanitizedPhone = sanitizePhoneInput(editPhone);
+    const phoneDigits = sanitizedPhone.replace(/\D/g, '');
+    if (sanitizedPhone && (phoneDigits.length < 9 || phoneDigits.length > 15)) {
+      alert("Please enter a valid phone number (9–15 digits).");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { error } = await supabase
         .from('users')
         .update({
           full_name: editName.trim(),
-          phone_number: editPhone.trim(),
+          phone_number: sanitizedPhone,
           profile_image: editAvatar
         })
         .eq('id', dbUser.id);
@@ -228,9 +236,10 @@ export default function UserProfile() {
       setDbUser(prev => ({
         ...prev,
         full_name: editName.trim(),
-        phone_number: editPhone.trim(),
+        phone_number: sanitizedPhone,
         profile_image: editAvatar
       }));
+      setEditPhone(sanitizedPhone);
       setIsEditing(false);
     } catch (error) {
       console.error("Error saving profile details:", error.message);
@@ -720,9 +729,11 @@ export default function UserProfile() {
                       <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                       <input 
                         type="tel"
+                        inputMode="tel"
+                        maxLength={16}
                         value={editPhone}
-                        placeholder="+94 77 123 4567"
-                        onChange={(e) => setEditPhone(e.target.value)}
+                        placeholder="e.g. 0771234567 or +94771234567"
+                        onChange={(e) => setEditPhone(sanitizePhoneInput(e.target.value))}
                         className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#024C25] focus:bg-white text-xs font-semibold text-gray-800 transition" 
                       />
                     </div>
