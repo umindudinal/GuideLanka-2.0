@@ -51,10 +51,14 @@ class NotificationService {
 
   /// Re-bind the logged-in driver's user ID to OneSignal on cold app launch.
   static Future<void> syncUserIdentity() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id');
-    if (userId != null && userId.isNotEmpty) {
-      OneSignal.login(userId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      if (userId != null && userId.isNotEmpty) {
+        OneSignal.login(userId);
+      }
+    } catch (e) {
+      debugPrint('OneSignal syncUserIdentity skipped: $e');
     }
   }
 

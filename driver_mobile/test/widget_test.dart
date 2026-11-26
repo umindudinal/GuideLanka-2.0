@@ -16,6 +16,7 @@ void main() {
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.text('GuideLanka'), findsOneWidget);
     expect(find.text('DRIVER PORTAL'), findsOneWidget);
+    expect(find.text('Email Address'), findsOneWidget);
   });
 
   test('S2R routing helpers return valid lifespans and positive distances', () {

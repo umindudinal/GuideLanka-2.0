@@ -646,15 +646,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleLogout() async {
-    await OneSignal.logout();
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    try {
+      await OneSignal.logout().timeout(const Duration(seconds: 1));
+    } catch (e) {
+      debugPrint('OneSignal logout skipped: $e');
+    }
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 
     if (!mounted) return;
 
-    Navigator.pushAndRemoveUntil(
-      context,
+    navigator.pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
       (route) => false,
     );

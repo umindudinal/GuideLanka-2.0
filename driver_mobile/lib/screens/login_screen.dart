@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isSendingOtp = false;
   bool _obscurePassword = true;
-  int _activeTab = 0;
+  int _activeTab = 1;
   bool _otpSent = false;
 
   Future<void> _onLoginSuccess(Map<String, dynamic> result) async {
@@ -375,6 +375,36 @@ class _LoginScreenState extends State<LoginScreen> {
                             Expanded(
                               child: GestureDetector(
                                 onTap: () {
+                                  if (!_isLoading && !_isSendingOtp) {
+                                    setState(() => _activeTab = 1);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: _activeTab == 1 ? AppColors.primary : Colors.transparent,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Email',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: _activeTab == 1 ? FontWeight.bold : FontWeight.normal,
+                                      color: _activeTab == 1 ? AppColors.primary : AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
 
                                   if (!_isLoading && !_isSendingOtp) {
                                     setState(() => _activeTab = 0);
@@ -397,36 +427,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontSize: 16,
                                       fontWeight: _activeTab == 0 ? FontWeight.bold : FontWeight.normal,
                                       color: _activeTab == 0 ? AppColors.primary : AppColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (!_isLoading && !_isSendingOtp) {
-                                    setState(() => _activeTab = 1);
-                                  }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      bottom: BorderSide(
-                                        color: _activeTab == 1 ? AppColors.primary : Colors.transparent,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Email',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: _activeTab == 1 ? FontWeight.bold : FontWeight.normal,
-                                      color: _activeTab == 1 ? AppColors.primary : AppColors.textMuted,
                                     ),
                                   ),
                                 ),
