@@ -68,14 +68,45 @@ export default function Dashboard({ user, onUserUpdate, onLogout }) {
   const [bookings, setBookings] = useState([]);
   const [tourists, setTourists] = useState([]);
 
-  const [selectedPark, setSelectedPark] = useState('YALA_BLOCK_5');
-  const [mapCenter, setMapCenter] = useState([6.5403, 81.3050]);
-  const [mapZoom, setMapZoom] = useState(15);
+  const [selectedPark, setSelectedPark] = useState('LOCAL_MAP');
+  const [mapCenter, setMapCenter] = useState([6.8087, 79.9923]);
+  const [mapZoom, setMapZoom] = useState(17);
+  const [currentUserLocation, setCurrentUserLocation] = useState(null);
   const [driverLocations, setDriverLocations] = useState({});
+
+  const requestCurrentLocation = (shouldCenter = true) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = [pos.coords.latitude, pos.coords.longitude];
+        setCurrentUserLocation(coords);
+        if (shouldCenter) {
+          setMapCenter(coords);
+          setMapZoom(17);
+        }
+      },
+      (err) => {
+        console.warn('Dashboard geolocation unavailable:', err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  useEffect(() => {
+    requestCurrentLocation(true);
+  }, []);
 
   const handleParkChange = (park) => {
     setSelectedPark(park);
-    if (park === 'YALA_BLOCK_5') {
+    if (park === 'LOCAL_MAP') {
+      if (currentUserLocation) {
+        setMapCenter(currentUserLocation);
+      } else {
+        setMapCenter([6.8087, 79.9923]);
+        requestCurrentLocation(true);
+      }
+      setMapZoom(17);
+    } else if (park === 'YALA_BLOCK_5') {
       setMapCenter([6.5403, 81.3050]);
       setMapZoom(15);
     } else if (park === 'YALA_BLOCK_6') {
@@ -526,6 +557,8 @@ export default function Dashboard({ user, onUserUpdate, onLogout }) {
                     zoom={mapZoom}
                     selectedPark={selectedPark}
                     driverLocations={driverLocations}
+                    currentUserLocation={currentUserLocation}
+                    onRequestLocateMe={() => requestCurrentLocation(true)}
                   />
                 </div>
               </div>
@@ -553,6 +586,7 @@ export default function Dashboard({ user, onUserUpdate, onLogout }) {
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-amber-500 rounded-full"></span> Wildlife Sighting</span>
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span> SOS Emergency</span>
                   <span className="flex items-center gap-1.5"><span className="w-3.5 h-1 bg-amber-500 rounded-sm"></span> Roads (Block 5 & 6)</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3.5 h-1 bg-sky-400 rounded-sm"></span> Local Route (map.geojson)</span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -562,6 +596,7 @@ export default function Dashboard({ user, onUserUpdate, onLogout }) {
                   onChange={(e) => handleParkChange(e.target.value)}
                   className="bg-slate-950 border border-slate-800 text-xs font-black text-emerald-400 py-2 px-3 rounded-xl focus:outline-none focus:border-emerald-500 transition cursor-pointer flex-1 sm:flex-initial"
                 >
+                  <option value="LOCAL_MAP">Current Location &amp; Route (map.geojson)</option>
                   <option value="YALA">Yala National Park (All Blocks)</option>
                   <option value="YALA_BLOCK_5">Yala Block 5 (Galge)</option>
                   <option value="YALA_BLOCK_6">Yala Block 6 (Lunugamvehera)</option>
@@ -580,6 +615,8 @@ export default function Dashboard({ user, onUserUpdate, onLogout }) {
                   zoom={mapZoom}
                   selectedPark={selectedPark}
                   driverLocations={driverLocations}
+                  currentUserLocation={currentUserLocation}
+                  onRequestLocateMe={() => requestCurrentLocation(true)}
                 />
               </div>
 

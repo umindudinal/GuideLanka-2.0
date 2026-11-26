@@ -13,12 +13,20 @@ import {
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import roadDataRaw from '../assets/yala_block_5_and_6.geojson?raw';
+import localMapDataRaw from '../assets/map.geojson?raw';
 
 let roadGeoJson = null;
 try {
   roadGeoJson = JSON.parse(roadDataRaw);
 } catch (e) {
   console.error("Failed to parse road GeoJSON:", e);
+}
+
+let localRouteGeoJson = null;
+try {
+  localRouteGeoJson = JSON.parse(localMapDataRaw);
+} catch (e) {
+  console.error("Failed to parse local map.geojson:", e);
 }
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -73,9 +81,68 @@ function ChangeView({ center, zoom }) {
   return null;
 }
 
-export default function LiveMap({ sightings, sosAlerts, drivers, routes, center, zoom, selectedPark = 'YALA', driverLocations = {} }) {
+function MapQuickActions({ currentLocation, onLocateMe, onJumpYala }) {
+  const map = useMap();
+
+  return (
+    <div className="leaflet-top leaflet-right" style={{ marginTop: '118px', marginRight: '10px', pointerEvents: 'auto' }}>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={() => {
+            if (currentLocation) {
+              map.setView(currentLocation, 17);
+            }
+            onLocateMe();
+          }}
+          className="w-10 h-10 bg-slate-900 border border-slate-800 text-sky-400 hover:text-sky-300 hover:bg-slate-950 flex items-center justify-center rounded-lg shadow-lg cursor-pointer transition select-none"
+          title="Zoom to My Current Location"
+          type="button"
+        >
+          📍
+        </button>
+        <button
+          onClick={() => {
+            map.setView(yalaCenter, 15);
+            onJumpYala();
+          }}
+          className="w-10 h-10 bg-slate-900 border border-slate-800 text-emerald-400 hover:text-emerald-300 hover:bg-slate-950 flex items-center justify-center rounded-lg shadow-lg cursor-pointer transition select-none"
+          title="Jump to Yala National Park"
+          type="button"
+        >
+          🌴
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function LiveMap({ sightings, sosAlerts, drivers, center, zoom, driverLocations = {}, currentUserLocation = null, onRequestLocateMe }) {
 
   const [isSatellite, setIsSatellite] = useState(true);
+  const [browserLocation, setBrowserLocation] = useState(currentUserLocation);
+
+  useEffect(() => {
+    if (currentUserLocation) {
+      setBrowserLocation(currentUserLocation);
+    }
+  }, [currentUserLocation]);
+
+  const handleLocateMe = () => {
+    if (onRequestLocateMe) {
+      onRequestLocateMe();
+    }
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setBrowserLocation([pos.coords.latitude, pos.coords.longitude]);
+        },
+        (err) => {
+          console.warn("Geolocation unavailable:", err.message);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  };
 
   const activeJeeps = drivers.map((driver, index) => {
     const profile = driver.driver_profile
@@ -152,7 +219,15 @@ export default function LiveMap({ sightings, sosAlerts, drivers, routes, center,
             {isSatellite ? '🗺️' : '🛰️'}
           </button>
         </div>
-      </div>      {roadGeoJson && (
+      </div>
+
+      <MapQuickActions
+        currentLocation={browserLocation}
+        onLocateMe={handleLocateMe}
+        onJumpYala={() => {}}
+      />
+
+      {roadGeoJson && (
         <GeoJSON
           data={roadGeoJson}
           style={{
@@ -177,6 +252,57 @@ export default function LiveMap({ sightings, sosAlerts, drivers, routes, center,
             });
           }}
         />
+      )}
+
+      {localRouteGeoJson && (
+        <GeoJSON
+          data={localRouteGeoJson}
+          style={{
+            color: '#38bdf8',
+            weight: 3.5,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }}
+          onEachFeature={(feature, layer) => {
+            layer.bindTooltip("🛣️ Safari Route Track (map.geojson)", {
+              sticky: true,
+              direction: 'top'
+            });
+            layer.on({
+              mouseover: (e) => {
+                e.target.setStyle({ weight: 5, color: '#7dd3fc', opacity: 1 });
+              },
+              mouseout: (e) => {
+                e.target.setStyle({ weight: 3.5, color: '#38bdf8', opacity: 0.9 });
+              }
+            });
+          }}
+        />
+      )}
+
+      {browserLocation && (
+        <>
+          <CircleMarker
+            center={browserLocation}
+            radius={18}
+            pathOptions={{ color: '#38bdf8', fillColor: '#38bdf8', fillOpacity: 0.2, weight: 1.5 }}
+          />
+          <CircleMarker
+            center={browserLocation}
+            radius={7}
+            pathOptions={{ color: '#ffffff', fillColor: '#0284c7', fillOpacity: 1, weight: 2.5 }}
+          >
+            <Popup>
+              <div className="p-1 font-sans text-center">
+                <h4 className="font-extrabold text-sky-700 text-xs">📍 Your Current Location</h4>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {browserLocation[0].toFixed(5)}, {browserLocation[1].toFixed(5)}
+                </p>
+              </div>
+            </Popup>
+          </CircleMarker>
+        </>
       )}
 
       {activeJeeps.map((jeep) => (
